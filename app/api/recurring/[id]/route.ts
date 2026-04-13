@@ -10,7 +10,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     if (!Number.isInteger(numId) || numId <= 0) {
       return Response.json({ error: "Invalid id." }, { status: 400 });
     }
-    const deleted = deleteRecurringExpense(numId);
+    const deleted = await deleteRecurringExpense(numId);
     if (!deleted) return Response.json({ error: "Not found." }, { status: 404 });
     return Response.json({ deleted: true });
   } catch (error) {
@@ -33,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       frequency?: Frequency;
     };
 
-    const updated = updateRecurringExpense(numId, body);
+    const updated = await updateRecurringExpense(numId, body);
     if (!updated) return Response.json({ error: "Not found." }, { status: 404 });
     return Response.json({ expense: updated });
   } catch (error) {

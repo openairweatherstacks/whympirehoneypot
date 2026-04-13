@@ -143,7 +143,7 @@ function inferCategory(description: string, direction: Direction, providedCatego
   return "General";
 }
 
-export function parseTransactionsCsv(
+export async function parseTransactionsCsv(
   csvText: string,
   documentType: DocumentType = "unknown"
 ) {
@@ -172,7 +172,7 @@ export function parseTransactionsCsv(
   }
 
   // Load learned classification rules once for the whole batch
-  const learnedRules = getClassificationRules();
+  const learnedRules = await getClassificationRules();
 
   return records
     .map((row) => {

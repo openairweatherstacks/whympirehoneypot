@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       documentType?: string;
     };
 
-    const result = savePerkDocument({
+    const result = await savePerkDocument({
       provider: String(body.provider ?? ""),
       title: String(body.title ?? ""),
       content: String(body.content ?? ""),

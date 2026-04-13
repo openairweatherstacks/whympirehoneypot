@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const signedAmount = direction === "expense" ? -Math.abs(rawAmount) : Math.abs(rawAmount);
     const amountCents = Math.round(signedAmount * 100);
 
-    const result = saveImportedTransactions(
+    const result = await saveImportedTransactions(
       "manual-entry",
       [
         {

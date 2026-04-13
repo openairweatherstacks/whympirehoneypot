@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const reviews = getPendingReviews();
+    const reviews = await getPendingReviews();
     return Response.json({ reviews, count: reviews.length });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Failed." }, { status: 500 });
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     if (body.action === "confirm") {
-      confirmTransactionClassification(id);
+      await confirmTransactionClassification(id);
       return Response.json({ ok: true });
     }
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       if (!body.direction || !body.category) {
         return Response.json({ error: "direction and category are required for corrections." }, { status: 400 });
       }
-      correctTransactionClassification(id, {
+      await correctTransactionClassification(id, {
         direction: body.direction,
         category: body.category,
         saveRule: body.saveRule ?? true

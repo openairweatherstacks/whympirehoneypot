@@ -7,10 +7,12 @@ export const runtime = "nodejs";
 
 export async function POST() {
   try {
-    const transactions = seedDemoTransactions();
-    const perks = seedDemoPerkDocuments();
-    const investments = seedDemoInvestments();
-    const debts = seedDemoDebtAccounts();
+    const [transactions, perks, investments, debts] = await Promise.all([
+      seedDemoTransactions(),
+      seedDemoPerkDocuments(),
+      seedDemoInvestments(),
+      seedDemoDebtAccounts()
+    ]);
     return Response.json({
       created: transactions.created || perks.created || investments.created || debts.created,
       transactionRowsInserted: transactions.created ? transactions.rowsInserted : 0,

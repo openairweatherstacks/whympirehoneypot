@@ -1,4 +1,3 @@
-import { use } from "react";
 import { AlertCenter } from "@/components/alert-center";
 import { ImportReview } from "@/components/import-review";
 import { CategoryBreakdown } from "@/components/category-breakdown";
@@ -29,21 +28,25 @@ import { getRecurringExpenses, getRecurringSummary } from "@/lib/recurring";
 
 export const dynamic = "force-dynamic";
 
-export default function HomePage({
+export default async function HomePage({
   searchParams
 }: {
   searchParams: Promise<{ member?: string }>;
 }) {
-  const params = use(searchParams);
+  const params = await searchParams;
   const activeMember = params.member === "jay" || params.member === "cicely" ? params.member : "all";
-  const snapshot = getDashboardSnapshot(activeMember === "all" ? undefined : activeMember);
-  const insights = generateFinancialInsights();
-  const deficitDashboard = getDeficitDashboard();
-  const investmentDashboard = getInvestmentDashboard();
-  const perkDashboard = getPerkDashboard();
+
+  const [snapshot, insights, deficitDashboard, investmentDashboard, perkDashboard, historicalDocuments, recurringExpenses] = await Promise.all([
+    getDashboardSnapshot(activeMember === "all" ? undefined : activeMember),
+    generateFinancialInsights(),
+    getDeficitDashboard(),
+    getInvestmentDashboard(),
+    getPerkDashboard(),
+    getHistoricalDocuments(),
+    getRecurringExpenses()
+  ]);
+
   const aiStatus = getAiConnectionStatus();
-  const historicalDocuments = getHistoricalDocuments();
-  const recurringExpenses = getRecurringExpenses();
   const recurringSummary = getRecurringSummary(recurringExpenses);
   const hasData = snapshot.totals.transactionCount > 0;
 

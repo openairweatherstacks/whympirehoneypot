@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 
 export async function POST() {
   try {
-    const result = seedDemoPerkDocuments();
+    const result = await seedDemoPerkDocuments();
     return Response.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not load sample benefit guides";

@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { ensureDb } from "@/lib/db";
 
 export type DocumentType = "bank" | "credit_card" | "investment" | "payroll" | "unknown";
 
@@ -126,180 +126,115 @@ export function classifyTransaction(
 
   // 2. Credit card logic — positive = charge (expense), negative/payment = expense (bill pay)
   if (documentType === "credit_card") {
-    // On a credit card statement, positive amounts are charges — expenses
-    // "Payment received" lines are also expenses (you're paying the card)
     if (rawAmount > 0) {
-      return {
-        direction: "expense",
-        confidence: "high",
-        needsReview: false,
-        note: "Credit card charge"
-      };
+      return { direction: "expense", confidence: "high", needsReview: false, note: "Credit card charge" };
     }
 
-    // Negative on credit card = payment or credit — ambiguous
     if (rawAmount < 0) {
       const isBillPay = BILL_PAYMENT_PATTERNS.some((p) => p.test(description));
       if (isBillPay) {
-        return {
-          direction: "expense",
-          confidence: "medium",
-          needsReview: true,
-          note: "Payment to credit card — classified as expense (bill pay)"
-        };
+        return { direction: "expense", confidence: "medium", needsReview: true, note: "Payment to credit card — classified as expense (bill pay)" };
       }
-      // Could be a refund / genuine income
-      return {
-        direction: "income",
-        confidence: "low",
-        needsReview: true,
-        note: "Negative amount on credit card — could be refund or credit"
-      };
+      return { direction: "income", confidence: "low", needsReview: true, note: "Negative amount on credit card — could be refund or credit" };
     }
   }
 
   // 3. Bank account logic — positive = income/deposit, negative = expense
-  // But check for ambiguous payment patterns
   if (rawAmount > 0) {
-    // Check if description looks like a bill payment despite being positive
     const isBillPayment = BILL_PAYMENT_PATTERNS.some((p) => p.test(description));
     if (isBillPayment) {
-      return {
-        direction: "expense",
-        confidence: "low",
-        needsReview: true,
-        note: "Positive amount but looks like a bill payment — needs confirmation"
-      };
+      return { direction: "expense", confidence: "low", needsReview: true, note: "Positive amount but looks like a bill payment — needs confirmation" };
     }
 
-    // Check if it's from a known service provider (suspicious income)
     const isServiceProvider = KNOWN_SERVICE_PROVIDERS.some((p) => p.test(description));
     if (isServiceProvider) {
-      return {
-        direction: "expense",
-        confidence: "low",
-        needsReview: true,
-        note: "Known service provider — unusual for this to be income, please confirm"
-      };
+      return { direction: "expense", confidence: "low", needsReview: true, note: "Known service provider — unusual for this to be income, please confirm" };
     }
 
-    // Check for transfers — ambiguous direction
     const isTransfer = AMBIGUOUS_PATTERNS.some((p) => p.test(description));
     if (isTransfer) {
-      return {
-        direction: "income",
-        confidence: "medium",
-        needsReview: true,
-        note: "Transfer or ambiguous transaction — confirm direction"
-      };
+      return { direction: "income", confidence: "medium", needsReview: true, note: "Transfer or ambiguous transaction — confirm direction" };
     }
 
-    return {
-      direction: "income",
-      confidence: "high",
-      needsReview: false,
-      note: "Positive deposit"
-    };
+    return { direction: "income", confidence: "high", needsReview: false, note: "Positive deposit" };
   }
 
-  // Negative amount — almost certainly an expense
   const isTransfer = AMBIGUOUS_PATTERNS.some((p) => p.test(description));
   if (isTransfer) {
-    return {
-      direction: "expense",
-      confidence: "medium",
-      needsReview: true,
-      note: "Outgoing transfer — confirm this is an expense, not an account move"
-    };
+    return { direction: "expense", confidence: "medium", needsReview: true, note: "Outgoing transfer — confirm this is an expense, not an account move" };
   }
 
-  return {
-    direction: "expense",
-    confidence: "high",
-    needsReview: false,
-    note: "Standard expense"
-  };
+  return { direction: "expense", confidence: "high", needsReview: false, note: "Standard expense" };
 }
 
 // ── CRUD for classification rules ──────────────────────────────────────────
-export function getClassificationRules(): ClassificationRule[] {
-  const db = getDb();
-  const rows = db
-    .prepare(`
-      SELECT id, pattern, pattern_type, true_direction, true_category,
-             document_type, hit_count, created_at
-      FROM classification_rules
-      ORDER BY hit_count DESC, created_at DESC
-    `)
-    .all() as RuleRow[];
+export async function getClassificationRules(): Promise<ClassificationRule[]> {
+  const db = await ensureDb();
+  const rows = (await db.execute(`
+    SELECT id, pattern, pattern_type, true_direction, true_category,
+           document_type, hit_count, created_at
+    FROM classification_rules
+    ORDER BY hit_count DESC, created_at DESC
+  `)).rows as unknown as RuleRow[];
 
   return rows.map((r) => ({
-    id: r.id,
+    id: Number(r.id),
     pattern: r.pattern,
     patternType: r.pattern_type as ClassificationRule["patternType"],
     trueDirection: r.true_direction as "income" | "expense",
     trueCategory: r.true_category,
     documentType: r.document_type as ClassificationRule["documentType"],
-    hitCount: r.hit_count,
+    hitCount: Number(r.hit_count),
     createdAt: r.created_at
   }));
 }
 
-export function addClassificationRule(input: {
+export async function addClassificationRule(input: {
   pattern: string;
   patternType?: "contains" | "exact" | "regex";
   trueDirection: "income" | "expense";
   trueCategory: string;
   documentType?: DocumentType | "any";
-}): ClassificationRule {
-  const db = getDb();
+}): Promise<ClassificationRule> {
+  const db = await ensureDb();
   const now = new Date().toISOString();
+  const docType = input.documentType ?? "any";
 
-  // Upsert by pattern + document_type
-  const existing = db
-    .prepare("SELECT id FROM classification_rules WHERE pattern = ? AND document_type = ?")
-    .get(input.pattern, input.documentType ?? "any") as { id: number } | undefined;
+  const existingRows = (await db.execute({
+    sql: "SELECT id FROM classification_rules WHERE pattern = ? AND document_type = ?",
+    args: [input.pattern, docType]
+  })).rows as unknown as Array<{ id: number }>;
 
-  if (existing) {
-    db.prepare(`
-      UPDATE classification_rules
-      SET true_direction = ?, true_category = ?, pattern_type = ?,
-          hit_count = hit_count + 1, created_at = ?
-      WHERE id = ?
-    `).run(
-      input.trueDirection,
-      input.trueCategory,
-      input.patternType ?? "contains",
-      now,
-      existing.id
-    );
+  if (existingRows.length > 0) {
+    await db.execute({
+      sql: `UPDATE classification_rules
+        SET true_direction = ?, true_category = ?, pattern_type = ?,
+            hit_count = hit_count + 1, created_at = ?
+        WHERE id = ?`,
+      args: [input.trueDirection, input.trueCategory, input.patternType ?? "contains", now, existingRows[0].id]
+    });
   } else {
-    db.prepare(`
-      INSERT INTO classification_rules
+    await db.execute({
+      sql: `INSERT INTO classification_rules
         (pattern, pattern_type, true_direction, true_category, document_type, hit_count, created_at)
-      VALUES (?, ?, ?, ?, ?, 1, ?)
-    `).run(
-      input.pattern,
-      input.patternType ?? "contains",
-      input.trueDirection,
-      input.trueCategory,
-      input.documentType ?? "any",
-      now
-    );
+        VALUES (?, ?, ?, ?, ?, 1, ?)`,
+      args: [input.pattern, input.patternType ?? "contains", input.trueDirection, input.trueCategory, docType, now]
+    });
   }
 
-  const row = db
-    .prepare("SELECT id, pattern, pattern_type, true_direction, true_category, document_type, hit_count, created_at FROM classification_rules WHERE pattern = ? AND document_type = ?")
-    .get(input.pattern, input.documentType ?? "any") as RuleRow;
+  const row = (await db.execute({
+    sql: "SELECT id, pattern, pattern_type, true_direction, true_category, document_type, hit_count, created_at FROM classification_rules WHERE pattern = ? AND document_type = ?",
+    args: [input.pattern, docType]
+  })).rows[0] as unknown as RuleRow;
 
   return {
-    id: row.id,
+    id: Number(row.id),
     pattern: row.pattern,
     patternType: row.pattern_type as ClassificationRule["patternType"],
     trueDirection: row.true_direction as "income" | "expense",
     trueCategory: row.true_category,
     documentType: row.document_type as ClassificationRule["documentType"],
-    hitCount: row.hit_count,
+    hitCount: Number(row.hit_count),
     createdAt: row.created_at
   };
 }
@@ -317,19 +252,17 @@ export type PendingReview = {
   confidence: Confidence;
 };
 
-export function getPendingReviews(): PendingReview[] {
-  const db = getDb();
-  const rows = db
-    .prepare(`
-      SELECT id, transaction_date, description, merchant,
-             amount_cents, direction, category,
-             classification_note, confidence
-      FROM transactions
-      WHERE needs_review = 1
-      ORDER BY transaction_date DESC
-      LIMIT 50
-    `)
-    .all() as Array<{
+export async function getPendingReviews(): Promise<PendingReview[]> {
+  const db = await ensureDb();
+  const rows = (await db.execute(`
+    SELECT id, transaction_date, description, merchant,
+           amount_cents, direction, category,
+           classification_note, confidence
+    FROM transactions
+    WHERE needs_review = 1
+    ORDER BY transaction_date DESC
+    LIMIT 50
+  `)).rows as unknown as Array<{
     id: number;
     transaction_date: string;
     description: string;
@@ -342,11 +275,11 @@ export function getPendingReviews(): PendingReview[] {
   }>;
 
   return rows.map((r) => ({
-    id: r.id,
+    id: Number(r.id),
     transactionDate: r.transaction_date,
     description: r.description,
     merchant: r.merchant,
-    amountCents: r.amount_cents,
+    amountCents: Number(r.amount_cents),
     currentDirection: r.direction as "income" | "expense",
     currentCategory: r.category,
     classificationNote: r.classification_note,
@@ -354,32 +287,32 @@ export function getPendingReviews(): PendingReview[] {
   }));
 }
 
-export function confirmTransactionClassification(id: number): void {
-  const db = getDb();
-  db.prepare("UPDATE transactions SET needs_review = 0 WHERE id = ?").run(id);
+export async function confirmTransactionClassification(id: number): Promise<void> {
+  const db = await ensureDb();
+  await db.execute({ sql: "UPDATE transactions SET needs_review = 0 WHERE id = ?", args: [id] });
 }
 
-export function correctTransactionClassification(
+export async function correctTransactionClassification(
   id: number,
   correction: { direction: "income" | "expense"; category: string; saveRule: boolean }
-): void {
-  const db = getDb();
+): Promise<void> {
+  const db = await ensureDb();
   const now = new Date().toISOString();
 
-  db.prepare(`
-    UPDATE transactions
-    SET direction = ?, category = ?, needs_review = 0, updated_at = ?
-    WHERE id = ?
-  `).run(correction.direction, correction.category, now, id);
+  await db.execute({
+    sql: `UPDATE transactions SET direction = ?, category = ?, needs_review = 0, updated_at = ? WHERE id = ?`,
+    args: [correction.direction, correction.category, now, id]
+  });
 
   if (correction.saveRule) {
-    const tx = db
-      .prepare("SELECT description FROM transactions WHERE id = ?")
-      .get(id) as { description: string } | undefined;
+    const txRows = (await db.execute({
+      sql: "SELECT description FROM transactions WHERE id = ?",
+      args: [id]
+    })).rows as unknown as Array<{ description: string }>;
 
-    if (tx) {
-      addClassificationRule({
-        pattern: tx.description,
+    if (txRows.length > 0) {
+      await addClassificationRule({
+        pattern: txRows[0].description,
         patternType: "exact",
         trueDirection: correction.direction,
         trueCategory: correction.category,

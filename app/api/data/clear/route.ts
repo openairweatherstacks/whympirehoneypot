@@ -1,19 +1,18 @@
-import { getDb } from "@/lib/db";
+import { ensureDb } from "@/lib/db";
 
 export const runtime = "nodejs";
 
 export async function POST() {
   try {
-    const db = getDb();
-
-    db.exec(`
-      DELETE FROM transactions;
-      DELETE FROM imports;
-      DELETE FROM ingestion_documents;
-      DELETE FROM perk_documents;
-      DELETE FROM investment_positions;
-      DELETE FROM debt_accounts;
-    `);
+    const db = await ensureDb();
+    await db.batch([
+      { sql: "DELETE FROM transactions" },
+      { sql: "DELETE FROM imports" },
+      { sql: "DELETE FROM ingestion_documents" },
+      { sql: "DELETE FROM perk_documents" },
+      { sql: "DELETE FROM investment_positions" },
+      { sql: "DELETE FROM debt_accounts" }
+    ], "write");
 
     return Response.json({ cleared: true, message: "All data cleared." });
   } catch (error) {

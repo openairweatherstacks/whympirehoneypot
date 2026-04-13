@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       monthlyContribution?: number;
     };
 
-    const result = saveInvestmentPosition({
+    const result = await saveInvestmentPosition({
       symbol: String(body.symbol ?? ""),
       name: String(body.name ?? ""),
       assetClass: String(body.assetClass ?? ""),

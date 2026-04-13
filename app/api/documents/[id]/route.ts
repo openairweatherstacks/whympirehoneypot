@@ -13,7 +13,7 @@ export async function DELETE(
       return Response.json({ error: "Invalid id." }, { status: 400 });
     }
 
-    const result = deleteDocument(numId);
+    const result = await deleteDocument(numId);
     if (!result.deleted) {
       return Response.json({ error: "Document not found." }, { status: 404 });
     }

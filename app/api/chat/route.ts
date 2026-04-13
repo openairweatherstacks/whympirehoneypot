@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
       try {
         // ── 1. Try local domain answerers (debt / investing / perks / fallback) ──
-        const localAnswer = getLocalAnswer(question);
+        const localAnswer = await getLocalAnswer(question);
 
         if (localAnswer) {
           send({
@@ -71,8 +71,8 @@ export async function POST(request: Request) {
         const model = process.env.ANTHROPIC_CHAT_MODEL ?? process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
         const client = new Anthropic({ apiKey });
 
-        const brain = getFinanceBrain();
-        const context = summarizeContext(brain);
+        const brain = await getFinanceBrain();
+        const context = await summarizeContext(brain);
 
         // Build the conversation — keep last 6 turns
         const conversationTurns = messages.slice(-6).map((m) => ({

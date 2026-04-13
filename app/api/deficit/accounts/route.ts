@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       creditLimit?: number;
     };
 
-    const result = saveDebtAccount({
+    const result = await saveDebtAccount({
       name: String(body.name ?? ""),
       debtType: String(body.debtType ?? ""),
       balance: Number(body.balance ?? 0),

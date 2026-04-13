@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const expenses = getRecurringExpenses();
+    const expenses = await getRecurringExpenses();
     return Response.json({ expenses });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Failed." }, { status: 500 });
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     if (!category) return Response.json({ error: "Category is required." }, { status: 400 });
     if (!Number.isFinite(amount) || amount <= 0) return Response.json({ error: "Amount must be a positive number." }, { status: 400 });
 
-    const expense = addRecurringExpense({
+    const expense = await addRecurringExpense({
       name,
       merchant: body.merchant,
       category,

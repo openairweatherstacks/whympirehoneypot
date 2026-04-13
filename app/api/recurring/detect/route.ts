@@ -4,14 +4,13 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const candidates = detectRecurringFromTransactions();
+    const candidates = await detectRecurringFromTransactions();
     return Response.json({ candidates });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Failed." }, { status: 500 });
   }
 }
 
-// POST: auto-import a detected candidate
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "merchant, category, and amount are required." }, { status: 400 });
     }
 
-    const expense = addRecurringExpense({
+    const expense = await addRecurringExpense({
       name: merchant,
       merchant,
       category,
