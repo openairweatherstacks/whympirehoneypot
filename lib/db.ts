@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { existsSync, mkdirSync } from "node:fs";
+import { accessSync, constants, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 function addColumnIfMissing(
@@ -14,8 +14,28 @@ function addColumnIfMissing(
   }
 }
 
+function ensureWritableDirectory(directory: string) {
+  if (!existsSync(directory)) {
+    mkdirSync(directory, { recursive: true });
+  }
+
+  accessSync(directory, constants.W_OK);
+  return directory;
+}
+
 function getDatabaseDirectory() {
-  return process.env.FINANCE_DATA_DIR?.trim() || join(process.cwd(), "data");
+  const explicitDirectory = process.env.FINANCE_DATA_DIR?.trim();
+  if (explicitDirectory) {
+    return ensureWritableDirectory(explicitDirectory);
+  }
+
+  const projectDataDirectory = join(process.cwd(), "data");
+  try {
+    return ensureWritableDirectory(projectDataDirectory);
+  } catch {
+    const tempRoot = process.env.TMPDIR?.trim() || "/tmp";
+    return ensureWritableDirectory(join(tempRoot, "whympire-honeypot-data"));
+  }
 }
 
 function getDatabasePath() {
@@ -165,12 +185,6 @@ export function getDb() {
   };
 
   if (!globalForDb.__financeCommandCenterDb) {
-    const databaseDirectory = getDatabaseDirectory();
-
-    if (!existsSync(databaseDirectory)) {
-      mkdirSync(databaseDirectory, { recursive: true });
-    }
-
     const db = new Database(getDatabasePath());
     globalForDb.__financeCommandCenterDb = db;
   }
