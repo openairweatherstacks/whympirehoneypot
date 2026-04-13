@@ -1,0 +1,58 @@
+{
+  "name": "whympire-honeypot",
+  "version": "0.1.0",
+  "private": true,
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "desktop:build:web": "next build && node scripts/prepare-desktop.mjs",
+    "desktop:dev": "concurrently -k \"npm run dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
+    "desktop:dir": "npm run desktop:build:web && electron-builder --dir",
+    "desktop:dist": "npm run desktop:build:web && electron-builder --publish never"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
+    "better-sqlite3": "^11.8.1",
+    "csv-parse": "^5.6.0",
+    "next": "^15.3.1",
+    "pdf-parse": "^2.4.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.14.1",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
+    "electron": "^35.1.4",
+    "electron-builder": "^26.0.12",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.whympire.honeypot",
+    "productName": "Whympire HoneyPot",
+    "asar": false,
+    "directories": {
+      "app": ".next/standalone",
+      "output": "release"
+    },
+    "files": [
+      "**/*",
+      "!**/*.map"
+    ],
+    "mac": {
+      "category": "public.app-category.finance"
+    },
+    "linux": {
+      "category": "Office"
+    }
+  }
+}

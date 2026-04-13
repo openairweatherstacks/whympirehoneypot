@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+release
+.DS_Store
+*.tsbuildinfo
+.claude/
+data/*.db
+data/*.db-*
+*.log
+
+# environment files — never commit real keys
+.env.local
+.env.*.local
