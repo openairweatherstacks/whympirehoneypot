@@ -3,8 +3,11 @@ import { ensureDb } from "@/lib/db";
 import { saveImportedTransactions } from "@/lib/finance";
 import { parseTransactionsCsv } from "@/lib/ingest";
 import type { ParsedTransaction } from "@/lib/ingest";
-import { PDFParse } from "pdf-parse";
-import { createWorker, PSM } from "tesseract.js";
+// pdf-parse and tesseract.js use browser APIs (DOMMatrix) that crash at module
+// load time in Node.js serverless runtimes. Use dynamic imports so they are
+// only loaded when actually processing a file, never at startup.
+type PDFParseType = { getText(): Promise<{ text: string }>; destroy(): Promise<void> };
+type PDFParseConstructor = new (options: { data: Buffer }) => PDFParseType;
 
 export type AiConnectionStatus = {
   provider: string;
@@ -258,6 +261,7 @@ function parseAnthropicExtraction(text: string): DocumentAnalysis {
 }
 
 async function extractPdfTextLocally(buffer: Buffer) {
+  const { PDFParse } = await import("pdf-parse") as unknown as { PDFParse: PDFParseConstructor };
   const parser = new PDFParse({ data: buffer });
   try {
     const result = await parser.getText();
@@ -268,6 +272,7 @@ async function extractPdfTextLocally(buffer: Buffer) {
 }
 
 async function getImageOcrWorker() {
+  const { createWorker, PSM } = await import("tesseract.js");
   const globalForWorker = globalThis as typeof globalThis & {
     __financeImageOcrWorkerPromise?: Promise<Awaited<ReturnType<typeof createWorker>>>;
   };

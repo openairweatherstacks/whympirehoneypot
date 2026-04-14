@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { detectDocumentType } from "@/lib/classification";
 import { extractTransactionsFromText } from "@/lib/documents";
-import { PDFParse } from "pdf-parse";
+type PDFParseType = { getText(): Promise<{ text: string }>; destroy(): Promise<void> };
+type PDFParseConstructor = new (options: { data: Buffer }) => PDFParseType;
 
 export const runtime = "nodejs";
 
@@ -102,6 +103,7 @@ async function scanLocally(file: File, mimeType: string, buffer: Buffer): Promis
   let text = "";
 
   if (mimeType === PDF_MIME) {
+    const { PDFParse } = await import("pdf-parse") as unknown as { PDFParse: PDFParseConstructor };
     const parser = new PDFParse({ data: buffer });
     try {
       const result = await parser.getText();
