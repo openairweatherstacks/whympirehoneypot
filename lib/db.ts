@@ -131,6 +131,18 @@ const CREATE_TABLES = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_classification_rules_pattern ON classification_rules(pattern, document_type)`,
   `CREATE INDEX IF NOT EXISTS idx_classification_rules_direction ON classification_rules(true_direction)`,
+  `CREATE TABLE IF NOT EXISTS savings_goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    target_cents INTEGER NOT NULL,
+    current_cents INTEGER NOT NULL DEFAULT 0,
+    target_date TEXT,
+    emoji TEXT NOT NULL DEFAULT '',
+    member TEXT NOT NULL DEFAULT 'joint',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_savings_goals_member ON savings_goals(member)`,
 ];
 
 // Additive column migrations — silently ignored if column already exists

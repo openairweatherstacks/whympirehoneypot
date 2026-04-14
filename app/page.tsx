@@ -16,11 +16,14 @@ import { PerkIntake } from "@/components/perk-intake";
 import { RecurringExpenses } from "@/components/recurring-expenses";
 import { SpendTrend } from "@/components/spend-trend";
 import { TransactionTable } from "@/components/transaction-table";
+import { GoalIntake } from "@/components/goal-intake";
 import { ManualEntry } from "@/components/manual-entry";
+import { SavingsGoals } from "@/components/savings-goals";
 import { UploadPanel } from "@/components/upload-panel";
 import { getDeficitDashboard } from "@/lib/deficit";
 import { getAiConnectionStatus, getHistoricalDocuments } from "@/lib/documents";
 import { formatCurrency, getDashboardSnapshot } from "@/lib/finance";
+import { getSavingsGoals } from "@/lib/goals";
 import { generateFinancialInsights } from "@/lib/intelligence";
 import { getInvestmentDashboard } from "@/lib/investing";
 import { getPerkDashboard } from "@/lib/perks";
@@ -36,14 +39,15 @@ export default async function HomePage({
   const params = await searchParams;
   const activeMember = params.member === "jay" || params.member === "cicely" ? params.member : "all";
 
-  const [snapshot, insights, deficitDashboard, investmentDashboard, perkDashboard, historicalDocuments, recurringExpenses] = await Promise.all([
+  const [snapshot, insights, deficitDashboard, investmentDashboard, perkDashboard, historicalDocuments, recurringExpenses, savingsGoals] = await Promise.all([
     getDashboardSnapshot(activeMember === "all" ? undefined : activeMember),
     generateFinancialInsights(),
     getDeficitDashboard(),
     getInvestmentDashboard(),
     getPerkDashboard(),
     getHistoricalDocuments(),
-    getRecurringExpenses()
+    getRecurringExpenses(),
+    getSavingsGoals(activeMember === "all" ? undefined : activeMember)
   ]);
 
   const aiStatus = getAiConnectionStatus();
@@ -163,7 +167,13 @@ export default async function HomePage({
           </div>
         </div>
 
-        {/* ── ROW 5: Recurring expenses ──────────────────────────────────────── */}
+        {/* ── ROW 5: Savings Goals ───────────────────────────────────────────── */}
+        <div className="grid gap-8 xl:grid-cols-[0.38fr_0.62fr]">
+          <GoalIntake />
+          <SavingsGoals goals={savingsGoals} />
+        </div>
+
+        {/* ── ROW 6: Recurring expenses ──────────────────────────────────────── */}
         <RecurringExpenses />
 
         {/* ── ROW 6: Perks ───────────────────────────────────────────────────── */}
