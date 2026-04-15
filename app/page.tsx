@@ -16,6 +16,7 @@ import { PerkIntake } from "@/components/perk-intake";
 import { RecurringExpenses } from "@/components/recurring-expenses";
 import { SpendTrend } from "@/components/spend-trend";
 import { TransactionTable } from "@/components/transaction-table";
+import { EtfLivePanel } from "@/components/etf-live-panel";
 import { GoalIntake } from "@/components/goal-intake";
 import { ManualEntry } from "@/components/manual-entry";
 import { NetWorthIntake } from "@/components/net-worth-intake";
@@ -170,6 +171,9 @@ export default async function HomePage({
             <InvestmentCommand dashboard={investmentDashboard} />
           </div>
         </div>
+
+        {/* ── ROW 4b: Live ETF Signals — Finnhub ────────────────────────────── */}
+        <EtfLivePanel />
 
         {/* ── ROW 5: Net Worth ───────────────────────────────────────────────── */}
         <div className="grid gap-8 xl:grid-cols-[0.38fr_0.62fr]">
