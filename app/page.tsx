@@ -18,6 +18,8 @@ import { SpendTrend } from "@/components/spend-trend";
 import { TransactionTable } from "@/components/transaction-table";
 import { GoalIntake } from "@/components/goal-intake";
 import { ManualEntry } from "@/components/manual-entry";
+import { NetWorthIntake } from "@/components/net-worth-intake";
+import { NetWorthTracker } from "@/components/net-worth-tracker";
 import { SavingsGoals } from "@/components/savings-goals";
 import { UploadPanel } from "@/components/upload-panel";
 import { getDeficitDashboard } from "@/lib/deficit";
@@ -25,6 +27,7 @@ import { getAiConnectionStatus, getHistoricalDocuments } from "@/lib/documents";
 import { formatCurrency, getDashboardSnapshot } from "@/lib/finance";
 import { getSavingsGoals } from "@/lib/goals";
 import { generateFinancialInsights } from "@/lib/intelligence";
+import { getNetWorthDashboard } from "@/lib/networth";
 import { getInvestmentDashboard } from "@/lib/investing";
 import { getPerkDashboard } from "@/lib/perks";
 import { getRecurringExpenses, getRecurringSummary } from "@/lib/recurring";
@@ -39,7 +42,7 @@ export default async function HomePage({
   const params = await searchParams;
   const activeMember = params.member === "jay" || params.member === "cicely" ? params.member : "all";
 
-  const [snapshot, insights, deficitDashboard, investmentDashboard, perkDashboard, historicalDocuments, recurringExpenses, savingsGoals] = await Promise.all([
+  const [snapshot, insights, deficitDashboard, investmentDashboard, perkDashboard, historicalDocuments, recurringExpenses, savingsGoals, netWorthDashboard] = await Promise.all([
     getDashboardSnapshot(activeMember === "all" ? undefined : activeMember),
     generateFinancialInsights(),
     getDeficitDashboard(),
@@ -47,7 +50,8 @@ export default async function HomePage({
     getPerkDashboard(),
     getHistoricalDocuments(),
     getRecurringExpenses(),
-    getSavingsGoals(activeMember === "all" ? undefined : activeMember)
+    getSavingsGoals(activeMember === "all" ? undefined : activeMember),
+    getNetWorthDashboard()
   ]);
 
   const aiStatus = getAiConnectionStatus();
@@ -167,7 +171,13 @@ export default async function HomePage({
           </div>
         </div>
 
-        {/* ── ROW 5: Savings Goals ───────────────────────────────────────────── */}
+        {/* ── ROW 5: Net Worth ───────────────────────────────────────────────── */}
+        <div className="grid gap-8 xl:grid-cols-[0.38fr_0.62fr]">
+          <NetWorthIntake />
+          <NetWorthTracker dashboard={netWorthDashboard} />
+        </div>
+
+        {/* ── ROW 6: Savings Goals ───────────────────────────────────────────── */}
         <div className="grid gap-8 xl:grid-cols-[0.38fr_0.62fr]">
           <GoalIntake />
           <SavingsGoals goals={savingsGoals} />

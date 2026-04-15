@@ -143,6 +143,25 @@ const CREATE_TABLES = [
     updated_at TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_savings_goals_member ON savings_goals(member)`,
+  `CREATE TABLE IF NOT EXISTS net_worth_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    account_type TEXT NOT NULL,
+    category TEXT NOT NULL,
+    balance_cents INTEGER NOT NULL DEFAULT 0,
+    member TEXT NOT NULL DEFAULT 'joint',
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_net_worth_accounts_type ON net_worth_accounts(account_type)`,
+  `CREATE TABLE IF NOT EXISTS net_worth_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_month TEXT NOT NULL UNIQUE,
+    assets_cents INTEGER NOT NULL DEFAULT 0,
+    liabilities_cents INTEGER NOT NULL DEFAULT 0,
+    net_worth_cents INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_net_worth_snapshots_month ON net_worth_snapshots(snapshot_month)`,
 ];
 
 // Additive column migrations — silently ignored if column already exists
