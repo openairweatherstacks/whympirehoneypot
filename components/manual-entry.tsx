@@ -20,6 +20,7 @@ type FormState = {
   rawAmount: string;
   direction: "income" | "expense";
   member: Member;
+  isRecurring: boolean;
 };
 
 function todayIso() {
@@ -34,7 +35,8 @@ function emptyForm(): FormState {
     category: "General",
     rawAmount: "",
     direction: "expense",
-    member: "joint"
+    member: "joint",
+    isRecurring: false,
   };
 }
 
@@ -131,7 +133,25 @@ export function ManualEntry() {
         return;
       }
 
-      setMessage({ text: `Transaction saved for ${MEMBER_LABELS[form.member]}.`, ok: true });
+      if (form.isRecurring) {
+        await fetch("/api/recurring", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: form.description,
+            merchant: form.merchant || form.description,
+            category: form.category,
+            amount,
+            frequency: "monthly",
+            source: "manual",
+            member: form.member,
+          }),
+        });
+        setMessage({ text: `Transaction saved and added to Recurring Expenses for ${MEMBER_LABELS[form.member]}.`, ok: true });
+      } else {
+        setMessage({ text: `Transaction saved for ${MEMBER_LABELS[form.member]}.`, ok: true });
+      }
+
       setForm(emptyForm());
       setReceiptFile(null);
       if (receiptRef.current) receiptRef.current.value = "";
@@ -335,7 +355,34 @@ export function ManualEntry() {
             </div>
           </div>
 
-          {/* ── Row 4: Actions + feedback ───────────────────────── */}
+          {/* ── Row 4: Recurring checkbox ────────────────────────── */}
+          <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 py-3 transition hover:bg-white/[0.07]">
+            <div className="relative flex shrink-0 items-center">
+              <input
+                type="checkbox"
+                checked={form.isRecurring}
+                onChange={(e) => set("isRecurring", e.target.checked)}
+                className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-white/20 bg-white/[0.06] transition checked:border-[var(--brand)] checked:bg-[var(--brand)] focus:outline-none"
+              />
+              <svg
+                className="pointer-events-none absolute left-0.5 top-0.5 hidden h-4 w-4 text-white peer-checked:block"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 8l3.5 3.5L13 4.5" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white/80">This is a monthly fixed expense</p>
+              <p className="text-xs text-white/36">Also adds this to Recurring Expenses automatically</p>
+            </div>
+          </label>
+
+          {/* ── Row 5: Actions + feedback ───────────────────────── */}
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <button
               type="button"
