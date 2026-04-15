@@ -247,6 +247,12 @@ export async function getDashboardSnapshot(member?: string): Promise<DashboardSn
   };
 }
 
+export async function deleteTransaction(id: number): Promise<boolean> {
+  const db = await ensureDb();
+  const result = await db.execute({ sql: `DELETE FROM transactions WHERE id = ?`, args: [id] });
+  return result.rowsAffected > 0;
+}
+
 export async function seedDemoTransactions() {
   const db = await ensureDb();
   const existingResult = await db.execute("SELECT COUNT(*) AS count FROM transactions");
